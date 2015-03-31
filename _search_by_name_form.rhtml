@@ -1,0 +1,170 @@
+<div style="background-color: #f1f6fb; margin: 10px 0px 5px 0px; border: 1px solid #c7c7c7; border-radius: 8px; padding: 3px 10px; font-size:12px; display:inline-block;">
+<form id="search_name_form">
+<%= hidden_field_tag 'student_class_id', student_class.id %>
+First name:
+<input type="text" id="first_name">
+
+Last name:
+<input type="text" id="last_name">
+
+<input type="checkbox" id="enable_disable_checkbox" value="checked">
+<span style="font-size:12px;"> Include disabled students</span>
+
+<input type="submit" id="search_button" value="Search">
+
+<input type="reset" id="cancel_button" value="Cancel" onclick = " $j('#search_name_form')[0].reset(); table_header_clone = $j('#table_header').clone(); $j('#student_table').empty();$j('#student_table').append(table_header_clone);$j(table_header_clone).hide();$j('#reset_password_form').slideUp();$j('#not_found').hide();">
+
+<%= render_indicator (:pre =>"search_name_progress")%>
+
+			
+<script>
+	$j(function() {
+		$j("#search_name_form").submit(function(event) {
+		event.preventDefault();
+		var student_class_id = $j("#student_class_id").val();
+		var student_first_name = $j("#first_name").val();
+		var student_last_name = $j("#last_name").val();
+		var student_state_checkbox = $j("input:checked").val();
+		
+		$j('#reset_password_form').hide();
+		$j('#search_name_progress_indicator').show();
+		
+		$j.ajax({
+				url: "/teacher/student_class/search_student_name?student_first_name=" + student_first_name + "&student_last_name=" + student_last_name + "&student_class_id=" + student_class_id + "&student_state_checkbox=" + student_state_checkbox
+		}).done(function(data){
+			var obj = $j.parseJSON(data);
+			var target = $j('#student_table');
+			<!--clone reset_password_form for using after executing target.empty-->
+			var form_clone = $j('#reset_password_form').clone();
+			var table_header_clone = '';
+			
+			
+			$j('#search_name_progress_indicator').hide();
+			$j('#not_found').hide();
+			<!--Found students after searching-->
+			if (obj[0]["is_find"] == true){
+				<!--Refresh the result table with new searching result-->
+				table_header_clone = $j('#table_header').clone();
+				target.empty();
+				target.append(table_header_clone);
+				$j(table_header_clone).show();
+				target.append(form_clone);
+				<!--append searched students one by one to table-->
+				$j.each(obj, function(index){
+					var student_id = obj[index]["student_id"]
+					var teacher_list = obj[index]["teacher_list"]
+					var student = obj[index]["first_name"] + " " + obj[index]["last_name"]
+					var login = obj[index]["login"]
+					var account_state = obj[index]["account_state"]
+					
+					<!--empty the reset_password_form, show the reset_password_form, append reset_password_form to the target user tuple, set reset_password_form's hidden_field_tag with id="student_id_field" to student_id-->
+					var click_operation = "$j('#password_reset')[0].reset();$j('#reset_password_form').show();$j('#" + student_id + "').append($j('#reset_password_form'));$j('#reset_password_form').find($j('#student_id_field')).val(" + student_id + ");"
+					<!--call function disable_account_state(student_id, student_state_checkbox)-->
+					var disable_operation = "disable_account_state(" + student_id + ",\'" + student_state_checkbox + "\')"
+					<!--call function enable_account_state(student_id)-->
+					var enable_operation = "enable_account_state(" + student_id + ")"
+					
+					if (account_state == "Enabled"){
+						target.append("<tr id=\"row_" + student_id + "\" " + "><td>" + student + "</td><td>" + login + "</td><td>" + teacher_list +"</td><td style=\"text-align:center; width:22%\" id=" + student_id + "><a style=\"text-decoration:underline; cursor:pointer;\" onclick=" + click_operation + ">Reset Password</a></td><td style=\"text-align:center; width:22%\" >" + "<a id=\"disable_" + student_id + "\" " + "style=\"text-decoration:underline; cursor:pointer; display:inline;\" onclick=" + disable_operation + ">Disable Account</a>" + "<a id=\"enable_" + student_id + "\" " + "style=\"text-decoration:underline; cursor:pointer; display:none;\" onclick=" + enable_operation + ">Enable Account</a>" + "</td></tr>")
+					}
+					else{
+						target.append("<tr id=\"row_" + student_id + "\" " + "><td>" + student + "</td><td>" + login + "</td><td>" + teacher_list +"</td><td style=\"text-align:center; width:22%\" id=" + student_id + "><a style=\"text-decoration:underline; cursor:pointer;\" onclick=" + click_operation + ">Reset Password</a></td><td style=\"text-align:center; width:22%\" >" + "<a id=\"enable_" + student_id + "\" " + "style=\"text-decoration:underline; cursor:pointer; display:inline;\" onclick=" + enable_operation + ">Enable Account</a>" + "<a id=\"disable_" + student_id + "\" " + "style=\"text-decoration:underline; cursor:pointer; display:none;\" onclick=" + disable_operation + ">Disable Account</a>" + "</td></tr>")
+					}
+				});
+			}
+			<!--No students found-->
+			else{
+				table_header_clone = $j('#table_header').clone();
+				target.empty();
+				target.append(table_header_clone);
+				$j(table_header_clone).hide();
+				$j('#not_found').show();
+			}
+			
+		}).fail(function(){
+			alert("Please type the first name, last name or both to search the student!")
+		});
+		});
+	});
+
+<!--Disable an user account-->	
+function disable_account_state(student_id, student_state_checkbox){
+	$j.ajax({
+			url: "/teacher/student_class/disable_account_state?student_id=" + student_id
+		}).done(function(){
+			alert("Disable account successfully!");
+			var row_id = "#row_" + student_id; 
+			var disable_id = "#disable_" + student_id;
+			var enable_id = "#enable_" + student_id;
+			$j(disable_id).hide();
+			$j(enable_id).show();
+			if (student_state_checkbox == "disabled"){
+				$j(row_id).hide();
+			}
+			
+		}).fail(function(){
+			alert("Disable account failed!");
+		});
+}
+
+<!--Enable an user account-->
+function enable_account_state(student_id){
+	$j.ajax({
+			url: "/teacher/student_class/enable_account_state?student_id=" + student_id
+		}).done(function(){
+			alert("Enable account successfully!")
+			var disable_id = "#disable_" + student_id
+			var enable_id = "#enable_" + student_id
+			$j(disable_id).show();
+			$j(enable_id).hide();
+			
+		}).fail(function(){
+			alert("Enable account failed!")
+		});
+}
+	
+</script>	
+</form>
+</div>
+<br\>
+
+<!--div used to print out none students found-->
+<div class="actions" id="not_found" style="background-color:#FFFFCC; font-size:14px; display: none;">
+	Student not found! Please make sure you type the right name
+</div>
+
+<!--table used to print out searched students-->
+<table id="student_table" style="width:100%;">
+	<tr id="table_header" style="display:none">
+		<th>Student Name</th>
+		<th>Login</th>
+		<th>Current teachers</th>
+		<th style="text-align: center" colspan="2">Actions</th>
+		
+</tr>
+</table>
+
+
+<!--reset_password_form-->
+<div id="reset_password_form" style="background-color: #f1f6fb; color: black; margin: 8px 0px 0px 0px; border: 1px solid #c7c7c7; border-radius: 8px; font-size:12px; display:none">
+		<%= form_remote_tag :url => { :controller => "teacher/student_class", :action => "reset_password"}, :html => { :id => "password_reset" } %>
+		  <%= hidden_field_tag :student_id, "", :id => "student_id_field" %>
+		  
+		  <div style="display:table-row">
+			<div style="display:table-cell; font-size:12px;">New </div>
+			<input type="password" id="student_password" name="student[password]" size="20">
+			
+		  </div>
+		  <div style="display:table-row">
+			<div style="display:table-cell; font-size:12px; ">Confirm </div>
+			<input type="password" id="student_password_confirmation" name="student[password_confirmation]" size="20">
+			
+		  </div>
+			<%= submit_tag "Save Changes", :style=>"margin-top: 5px; font-size:12px;" %>
+			<%= submit_tag 'Cancel', :onclick => "$$('#reset_password_form').invoke('hide');", :style=>"height:24px; font-size:12px", :type => "reset" %>
+		</form>
+</div>
+
+
+
+
