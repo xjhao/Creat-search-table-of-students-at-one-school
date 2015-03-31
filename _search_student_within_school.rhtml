@@ -1,0 +1,11 @@
+<div class="actions" id="search_students" style="text-align:center;">
+	<span id="student_account_list" style="font-size:20px;color:#005192;">Students With Accounts at This School</span>
+	<br>
+	
+	<div id="<%=dom_id(student_class)%>_search_student" style="font-size:20px; text-align:left; color:#005192; display:inline;">
+		<%= render :partial => "/teacher/student_class_section/search_by_name_form", :locals => {:student_class => student_class} %>
+	</div>
+
+</div>
+	
+<hr class="double_line">
