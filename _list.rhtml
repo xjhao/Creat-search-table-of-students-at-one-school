@@ -1,0 +1,93 @@
+<style>
+.enrollment.item{
+  padding-top: 10px;
+}
+
+
+</style>
+
+<script>
+
+// SLIDEDOWN   = SHOW
+// SLIDEUP     = HIDE
+// SLIDETOGGLE = TOGGLE
+
+function show_form(target_div, container_div, target_field, target_id, section_id){
+  var target = $j(target_div);
+  var container = $j(container_div);
+  container.children()[0].reset();  
+
+  if( target.find(container_div).size() > 0){
+    container.slideToggle();
+  }else{
+    container.hide();
+    target.append(container);
+    container.slideDown();
+  }
+  if(container_div == "#change_password_form"){
+    $j('#change_section_form').slideUp();
+  }else{
+    $j('#change_password_form').slideUp();
+    container.find('select').val(section_id);
+  }
+  
+  container.find(target_field).val(target_id);
+  return false;
+}
+
+function show_student_links(enrollment_id){
+  var links = $j("#edit_student_"+enrollment_id+"_div");
+  
+  if(links.css('display') != 'none'){
+    links.slideUp();
+  }else{ //We did not click the same name
+    $j('.student_links').slideUp();
+    links.slideDown();
+  }
+}
+
+
+
+</script>
+
+<div id="<%= "#{dom_id(@student_class)}_sections" %>" >
+  <% if @roster_video %>
+    <center>
+      <iframe width="560" height="315" src="//www.youtube.com/embed/Vy-nomqDj3U" frameborder="0" allowfullscreen></iframe>
+      <br>
+      <a href="http://www.aboutus.assistments.org/getting-started-helping-students-get-started.php" target="_blank">Learn how to help your students make accounts and enroll in your class</a>
+    </center>
+    
+  <% else %>
+    <center>Click on the student name to access student settings</center>
+  <% end %>
+  
+  <hr class="double_line">
+ 
+  <%= render(:partial => 'teacher/student_class_section/student_class_section', :collection => @student_class_sections) %>
+  
+  <%= render(:partial => 'teacher/student_class_section/new') %>
+
+  <%
+	#Check if it is a verified teacher. Only verified teacher can see the search box 'search_student_within_school'
+	
+	type_sql_request = "SELECT type FROM user_roles WHERE user_id IN (
+								SELECT user_id FROM user_roles WHERE id IN (
+									SELECT teacher_id FROM teacher_classes WHERE student_class_id = #{@student_class.attributes['id']})) 
+									AND role_id IN (SELECT id FROM roles WHERE name = 'VerifiedTeacher')"
+	request_result = ActiveRecord::Base.connection.execute(type_sql_request)
+	if !request_result.result[0].nil? and request_result.result[0][0] == 'VerifiedTeacher'
+		is_verified_teacher = true
+	else
+		is_verified_teacher = false
+	end
+  %>
+  
+  <%if is_verified_teacher %>
+	<%= render(:partial => 'teacher/student_class_section/search_student_within_school', :locals => {:student_class => @student_class}) %>	
+  <%end%>
+  
+  <%= render(:partial => 'teacher/enrollment/student_edit_form') %>
+  
+</div>
+
